@@ -106,14 +106,23 @@ export class LiteratureNote {
                 valueToSet = { "mSelect": [{ "content": jsonObject.containerTitle, "color": "1" }] };
                 break;
               case dateColID:
-                const date = new Date(jsonObject.year, 0, 1);
+                let date;
+                if (jsonObject.entry.issued) {
+                  date = new Date(jsonObject.entry.issued);
+                } else if (jsonObject.year) {
+                  date = new Date(jsonObject.year, 0, 1);
+                } else {
+                  continue;
+                }
                 valueToSet = { date: { content: date.getTime(), isNotEmpty: true, isNotTime: true } };
                 break;
               case linkColID:
-                if (!jsonObject.DOI) {
+                if (jsonObject.DOI) {
                   valueToSet = { url: { content: "https://doi.org/" + jsonObject.DOI } };
-                } else {
+                } else if (jsonObject.URL) {
                   valueToSet = { url: { content: jsonObject.URL } };
+                } else {
+                  continue;
                 }
                 break;
               case zoteroColID:
