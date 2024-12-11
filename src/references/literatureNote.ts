@@ -9,7 +9,7 @@ import SiYuanPluginCitation from "../index";
 import { type ILogger, createLogger } from "../utils/simple-logger";
 import { generateFromTemplate } from "../utils/templates";
 import { cleanEmptyKey } from "../utils/util";
-import { confirm, getFrontend } from "siyuan";
+import { confirm, getFrontend,fetchSyncPost} from "siyuan";
 
 export class LiteratureNote {
     plugin: SiYuanPluginCitation;
@@ -53,6 +53,88 @@ export class LiteratureNote {
         this.plugin.literaturePool.set({id: noteData.rootId, key: key});
         this._insertComplexContents(noteData.rootId, noteData.userDataId, `[${userDataTitle}](siyuan://blocks/${noteData.userDataId})\n\n`, entry, []);
         this.updateDataSourceItem(key, entry);
+        // ----------------------添加到数据库 ---------------------// 
+        // ------------数据库绑定块  ------------ //
+        const jsonString = JSON.stringify(cleanEmptyKey(Object.assign({}, entry)));
+        const jsonObject = JSON.parse(jsonString);
+        console.log(jsonObject);
+
+          const avID = "20230804022413-vswldwv";
+          const firstAuthorColID = "20240104153158-p1epwj9";
+          const lastAuthorColID = "20240225205034-qfeljra";
+          const journalColID = "20240104153236-i9v8625";
+          const dateColID = "20240104153321-cpzzkjn";
+          const linkColID = "20240104153434-hjpc1fl";
+          const zoteroColID = "20241211174024-qbev7nn";
+          const docId = noteData.rootId // 文档id
+          const docids = [noteData.rootId] // 文档id
+          const srcs = docids.map(docId => ({
+            "id": docId,
+            "isDetached": false,
+          }));
+
+          const input = {
+            "avID": avID,
+            'srcs': srcs
+          }
+          await fetchSyncPost('/api/av/addAttributeViewBlocks', input)
+
+
+          // ------------设置属性 ------------ //
+          const keyIDs = [
+            firstAuthorColID,
+            lastAuthorColID,
+            journalColID,
+            dateColID,
+            linkColID,
+            zoteroColID
+          ];
+          for (const keyID of keyIDs) {
+
+
+            let valueToSet;
+            switch (keyID) {
+              case firstAuthorColID:
+                valueToSet = { mSelect: [{ content: jsonObject.authorString.split(", ")[0], color: "1" }] };
+                break;
+              case lastAuthorColID:
+                const authors = jsonObject.authorString.split(", ");
+                const lastAuthor = authors[authors.length - 1];
+                valueToSet = { mSelect: [{ content: lastAuthor, color:"1" }] };
+                break;
+              case journalColID:
+                valueToSet = { "mSelect": [{ "content": jsonObject.containerTitle, "color": "1" }] };
+                break;
+              case dateColID:
+                const date = new Date(jsonObject.year, 0, 1);
+                valueToSet = { date: { content: date.getTime(), isNotEmpty: true, isNotTime: true } };
+                break;
+              case linkColID:
+                if (!jsonObject.DOI) {
+                  valueToSet = { url: { content: "https://doi.org/" + jsonObject.DOI } };
+                } else {
+                  valueToSet = { url: { content: jsonObject.URL } };
+                }
+                break;
+              case zoteroColID:
+                valueToSet = { url: { content: jsonObject.zoteroSelectURI } };
+                break;
+            }
+            if (valueToSet) {
+              try {
+                await fetchSyncPost("/api/av/setAttributeViewBlockAttr", {
+                  avID: avID,
+                  keyID: keyID,
+                  rowID: docId,
+                  value: valueToSet,
+                });
+                console.log(`Value set for BlockID: ${docId}, KeyID: ${keyID}`);
+              } catch (error) {
+                console.error(`Error setting value for BlockID: ${docId}, KeyID: ${keyID}`, error);
+              }
+            }
+        }
+        // ----------------------添加到数据库 ---------------------// 
         return;
       }
     }
