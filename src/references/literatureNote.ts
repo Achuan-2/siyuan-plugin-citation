@@ -91,19 +91,22 @@ export class LiteratureNote {
           ];
           for (const keyID of keyIDs) {
 
-
+            const randomColor = Math.floor(Math.random() * 13) + 1;
+            console.log(randomColor);
             let valueToSet;
             switch (keyID) {
               case firstAuthorColID:
-                valueToSet = { mSelect: [{ content: jsonObject.authorString.split(", ")[0], color: "1" }] };
+
+                valueToSet = { mSelect: [{ content: jsonObject.authorString.split(", ")[0], color: randomColor.toString() }] };
                 break;
               case lastAuthorColID:
+
                 const authors = jsonObject.authorString.split(", ");
                 const lastAuthor = authors[authors.length - 1];
-                valueToSet = { mSelect: [{ content: lastAuthor, color:"1" }] };
+                valueToSet = { mSelect: [{ content: lastAuthor, color: randomColor.toString() }] };
                 break;
               case journalColID:
-                valueToSet = { "mSelect": [{ "content": jsonObject.containerTitle, "color": "1" }] };
+                valueToSet = { "mSelect": [{ "content": jsonObject.containerTitle, color: randomColor.toString() }] };
                 break;
               case dateColID:
                 let date;
